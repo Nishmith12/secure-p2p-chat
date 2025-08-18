@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { db } from './firebase';
-import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, deleteDoc } from "firebase/firestore";
 
 // WebRTC configuration using public Google STUN servers
 const servers = {
@@ -12,19 +12,12 @@ const servers = {
 
 // --- Audio Notification Function ---
 const playNotificationSound = () => {
-  // Create an AudioContext
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  // Create an oscillator node
   const oscillator = audioCtx.createOscillator();
-  // Set oscillator type to sine wave
   oscillator.type = 'sine';
-  // Set frequency (in this case, a C5 note)
   oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
-  // Connect oscillator to the destination (your speakers)
   oscillator.connect(audioCtx.destination);
-  // Start the sound
   oscillator.start();
-  // Stop the sound after a short duration (100ms)
   oscillator.stop(audioCtx.currentTime + 0.1);
 };
 
@@ -39,19 +32,32 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [peerIsTyping, setPeerIsTyping] = useState(false);
-  const [copyButtonText, setCopyButtonText] = useState('Copy ID'); // State for the copy button text
+  const [copyButtonText, setCopyButtonText] = useState('Copy ID');
   
   // useRef to hold instances that shouldn't trigger re-renders on change
   const pc = useRef(new RTCPeerConnection(servers));
   const dataChannel = useRef(null);
   const peerNickname = useRef('Peer');
-  const typingTimeout = useRef(null); // Ref to manage the typing timeout
+  const typingTimeout = useRef(null);
 
   // Ref for auto-scrolling to the latest message
   const messagesEndRef = useRef(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // --- Effect for automatic cleanup on tab close ---
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      // This will trigger the disconnect logic if the user closes the tab
+      handleDisconnect(true);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [chatId, joinId]); // Rerun if chatId or joinId changes
 
   // --- WebRTC Logic: Create Chat (Caller) ---
   const handleCreateChat = async () => {
@@ -157,7 +163,7 @@ export default function App() {
         peerNickname.current = data.name;
         setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.` }]);
       } else if (data.type === 'chat') {
-        playNotificationSound(); // Play sound on incoming message
+        playNotificationSound();
         setPeerIsTyping(false); 
         clearTimeout(typingTimeout.current);
         setMessages((prev) => [...prev, { type: 'peer', content: data.message }]);
@@ -193,15 +199,29 @@ export default function App() {
     }
   };
 
-  // --- Disconnect Logic ---
-  const handleDisconnect = () => {
+  // --- Disconnect and Cleanup Logic ---
+  const handleDisconnect = async (isUnloading = false) => {
+    // Determine which ID to use for deletion
+    const docId = chatId || joinId;
+    if (docId) {
+      const callDoc = doc(db, 'calls', docId);
+      // Note: Deleting subcollections client-side is complex. 
+      // This deletes the main doc, orphaning the subcollections.
+      // For a production app, a Cloud Function is better for deep deletes.
+      await deleteDoc(callDoc);
+    }
+
     if (dataChannel.current) {
       dataChannel.current.close();
     }
     if (pc.current) {
       pc.current.close();
     }
-    window.location.reload();
+    
+    // Don't reload if the page is already unloading
+    if (!isUnloading) {
+      window.location.reload();
+    }
   };
 
   // --- Copy ID Logic ---
@@ -223,7 +243,7 @@ export default function App() {
             <p className="text-xs text-slate-300">Messages are sent directly and are never stored.</p>
           </div>
           {page === 'chat' && (
-            <button onClick={handleDisconnect} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition text-sm">
+            <button onClick={() => handleDisconnect(false)} className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-700 transition text-sm">
               Disconnect
             </button>
           )}

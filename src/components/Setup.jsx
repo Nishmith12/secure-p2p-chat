@@ -6,6 +6,13 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
   const [status, setStatus] = useState('Waiting');
   const [copyButtonText, setCopyButtonText] = useState('Copy ID');
 
+  const setupDataChannel = (channel) => {
+    channel.onopen = () => {
+      console.log("Data channel is open!");
+      setPage('chat');
+    };
+  };
+
   const handleCreateChat = async () => {
     if (!nickname.trim()) return alert("Please enter a nickname!");
     setStatus('Creating chat...');
@@ -21,6 +28,7 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
     };
 
     dataChannel.current = pc.current.createDataChannel("chat");
+    setupDataChannel(dataChannel.current); // Setup onopen for the creator
     
     const offerDescription = await pc.current.createOffer();
     await pc.current.setLocalDescription(offerDescription);
@@ -44,11 +52,6 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
       });
     });
 
-    pc.current.ondatachannel = (event) => {
-        dataChannel.current = event.channel;
-        setPage('chat');
-    };
-
     setStatus(`Chat created. Share the ID!`);
   };
 
@@ -67,7 +70,7 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
 
     pc.current.ondatachannel = (event) => {
       dataChannel.current = event.channel;
-      setPage('chat');
+      setupDataChannel(dataChannel.current); // Setup onopen for the joiner
     };
 
     const callData = (await getDoc(callDoc)).data();

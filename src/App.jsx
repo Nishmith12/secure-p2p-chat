@@ -10,6 +10,25 @@ const servers = {
   iceCandidatePoolSize: 10,
 };
 
+// --- Audio Notification Function ---
+const playNotificationSound = () => {
+  // Create an AudioContext
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Create an oscillator node
+  const oscillator = audioCtx.createOscillator();
+  // Set oscillator type to sine wave
+  oscillator.type = 'sine';
+  // Set frequency (in this case, a C5 note)
+  oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); 
+  // Connect oscillator to the destination (your speakers)
+  oscillator.connect(audioCtx.destination);
+  // Start the sound
+  oscillator.start();
+  // Stop the sound after a short duration (100ms)
+  oscillator.stop(audioCtx.currentTime + 0.1);
+};
+
+
 export default function App() {
   // State for managing UI pages and inputs
   const [page, setPage] = useState('setup'); // 'setup' or 'chat'
@@ -125,7 +144,6 @@ export default function App() {
     dataChannel.current.onclose = () => {
       console.log("Data channel is closed!");
       setStatus('Disconnected.');
-      // Don't alert here, handle UI change in handleDisconnect or if peer closes
       if (page === 'chat') {
         alert("Peer has disconnected.");
         window.location.reload();
@@ -138,16 +156,16 @@ export default function App() {
         peerNickname.current = data.name;
         setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.` }]);
       } else if (data.type === 'chat') {
-        setPeerIsTyping(false); // Hide typing indicator when a message is received
+        playNotificationSound(); // Play sound on incoming message
+        setPeerIsTyping(false); 
         clearTimeout(typingTimeout.current);
         setMessages((prev) => [...prev, { type: 'peer', content: data.message }]);
       } else if (data.type === 'typing') {
-        // When a typing message is received, show indicator and set a timeout to hide it
         setPeerIsTyping(true);
         clearTimeout(typingTimeout.current);
         typingTimeout.current = setTimeout(() => {
           setPeerIsTyping(false);
-        }, 2000); // Hide after 2 seconds of inactivity
+        }, 2000); 
       }
     };
   };
@@ -170,7 +188,6 @@ export default function App() {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     if (dataChannel.current && dataChannel.current.readyState === 'open') {
-      // Send a typing signal to the peer
       dataChannel.current.send(JSON.stringify({ type: 'typing' }));
     }
   };
@@ -183,7 +200,6 @@ export default function App() {
     if (pc.current) {
       pc.current.close();
     }
-    // Reloading the page is a simple way to reset the entire state
     window.location.reload();
   };
 

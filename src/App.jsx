@@ -19,11 +19,13 @@ export default function App() {
   const [status, setStatus] = useState('Waiting');
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [peerIsTyping, setPeerIsTyping] = useState(false); // New state for typing indicator
   
   // useRef to hold instances that shouldn't trigger re-renders on change
   const pc = useRef(new RTCPeerConnection(servers));
   const dataChannel = useRef(null);
   const peerNickname = useRef('Peer');
+  const typingTimeout = useRef(null); // Ref to manage the typing timeout
 
   // Ref for auto-scrolling to the latest message
   const messagesEndRef = useRef(null);
@@ -36,29 +38,24 @@ export default function App() {
     if (!nickname.trim()) return alert("Please enter a nickname!");
     setStatus('Creating chat...');
 
-    // Firestore references for signaling
     const callDoc = doc(collection(db, 'calls'));
     const offerCandidates = collection(callDoc, 'offerCandidates');
     const answerCandidates = collection(callDoc, 'answerCandidates');
 
     setChatId(callDoc.id);
 
-    // 1. Listen for ICE candidates and add them to Firestore
     pc.current.onicecandidate = (event) => {
       event.candidate && addDoc(offerCandidates, event.candidate.toJSON());
     };
 
-    // 2. Create the data channel
     dataChannel.current = pc.current.createDataChannel("chat");
     setupDataChannelEvents();
 
-    // 3. Create an offer, set it as local description, and save to Firestore
     const offerDescription = await pc.current.createOffer();
     await pc.current.setLocalDescription(offerDescription);
     const offer = { sdp: offerDescription.sdp, type: offerDescription.type };
     await setDoc(callDoc, { offer });
 
-    // 4. Listen for the answer from the peer
     onSnapshot(callDoc, (snapshot) => {
       const data = snapshot.data();
       if (!pc.current.currentRemoteDescription && data?.answer) {
@@ -68,7 +65,6 @@ export default function App() {
       }
     });
 
-    // 5. Listen for ICE candidates from the peer
     onSnapshot(answerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
@@ -90,29 +86,24 @@ export default function App() {
     const answerCandidates = collection(callDoc, 'answerCandidates');
     const offerCandidates = collection(callDoc, 'offerCandidates');
 
-    // 1. Listen for ICE candidates and add them to Firestore
     pc.current.onicecandidate = (event) => {
       event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
     };
 
-    // 2. Wait for the data channel to be established by the caller
     pc.current.ondatachannel = (event) => {
       dataChannel.current = event.channel;
       setupDataChannelEvents();
     };
 
-    // 3. Get the offer from Firestore, set it as remote description
     const callData = (await getDoc(callDoc)).data();
     const offerDescription = new RTCSessionDescription(callData.offer);
     await pc.current.setRemoteDescription(offerDescription);
 
-    // 4. Create an answer, set it as local description, and save to Firestore
     const answerDescription = await pc.current.createAnswer();
     await pc.current.setLocalDescription(answerDescription);
     const answer = { type: answerDescription.type, sdp: answerDescription.sdp };
     await updateDoc(callDoc, { answer });
 
-    // 5. Listen for ICE candidates from the peer
     onSnapshot(offerCandidates, (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added') {
@@ -127,16 +118,15 @@ export default function App() {
     dataChannel.current.onopen = () => {
       console.log("Data channel is open!");
       setStatus('Connected!');
-      // Exchange nicknames once the connection is open
       dataChannel.current.send(JSON.stringify({ type: 'nickname', name: nickname }));
-      setPage('chat'); // Switch to the chat view
+      setPage('chat');
     };
 
     dataChannel.current.onclose = () => {
       console.log("Data channel is closed!");
       setStatus('Disconnected.');
       alert("Connection closed.");
-      window.location.reload(); // Simple way to reset state
+      window.location.reload();
     };
 
     dataChannel.current.onmessage = (event) => {
@@ -145,7 +135,16 @@ export default function App() {
         peerNickname.current = data.name;
         setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.` }]);
       } else if (data.type === 'chat') {
+        setPeerIsTyping(false); // Hide typing indicator when a message is received
+        clearTimeout(typingTimeout.current);
         setMessages((prev) => [...prev, { type: 'peer', content: data.message }]);
+      } else if (data.type === 'typing') {
+        // When a typing message is received, show indicator and set a timeout to hide it
+        setPeerIsTyping(true);
+        clearTimeout(typingTimeout.current);
+        typingTimeout.current = setTimeout(() => {
+          setPeerIsTyping(false);
+        }, 2000); // Hide after 2 seconds of inactivity
       }
     };
   };
@@ -161,6 +160,15 @@ export default function App() {
         dataChannel.current.send(JSON.stringify(data));
         setMessages((prev) => [...prev, { type: 'self', content: message }]);
         setNewMessage('');
+    }
+  };
+
+  // --- Typing Indicator Logic ---
+  const handleTyping = (e) => {
+    setNewMessage(e.target.value);
+    if (dataChannel.current && dataChannel.current.readyState === 'open') {
+      // Send a typing signal to the peer
+      dataChannel.current.send(JSON.stringify({ type: 'typing' }));
     }
   };
 
@@ -220,8 +228,12 @@ export default function App() {
                 ))}
                 <div ref={messagesEndRef} />
               </div>
+              {/* Typing indicator UI */}
+              <div className="h-6 px-4 pb-2">
+                {peerIsTyping && <p className="text-sm text-slate-500 italic">{`${peerNickname.current} is typing...`}</p>}
+              </div>
               <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type your message..." className="flex-grow w-full px-4 py-2 bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
+                <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-2 bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
                 <button type="submit" className="bg-indigo-600 text-white rounded-full p-3 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform active:scale-95">
                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>

@@ -38,7 +38,8 @@ export default function App() {
   const [status, setStatus] = useState('Waiting');
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [peerIsTyping, setPeerIsTyping] = useState(false); // New state for typing indicator
+  const [peerIsTyping, setPeerIsTyping] = useState(false);
+  const [copyButtonText, setCopyButtonText] = useState('Copy ID'); // State for the copy button text
   
   // useRef to hold instances that shouldn't trigger re-renders on change
   const pc = useRef(new RTCPeerConnection(servers));
@@ -203,6 +204,15 @@ export default function App() {
     window.location.reload();
   };
 
+  // --- Copy ID Logic ---
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(chatId);
+    setCopyButtonText('Copied!');
+    setTimeout(() => {
+      setCopyButtonText('Copy ID');
+    }, 2000);
+  };
+
   // --- JSX for Rendering UI ---
   return (
     <div className="h-full bg-slate-100 font-sans antialiased text-slate-800 flex items-center justify-center p-4">
@@ -236,7 +246,9 @@ export default function App() {
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-slate-700">Share this ID with your peer:</label>
                       <input type="text" value={chatId} readOnly className="w-full mt-1 p-2 bg-white border border-slate-300 rounded-md shadow-sm" />
-                      <button onClick={() => navigator.clipboard.writeText(chatId)} className="w-full mt-2 bg-slate-200 text-slate-700 py-1 px-3 rounded-md hover:bg-slate-300 text-sm">Copy ID</button>
+                      <button onClick={handleCopyId} className="w-full mt-2 bg-slate-200 text-slate-700 py-1 px-3 rounded-md hover:bg-slate-300 text-sm">
+                        {copyButtonText}
+                      </button>
                     </div>
                   )}
                 </div>

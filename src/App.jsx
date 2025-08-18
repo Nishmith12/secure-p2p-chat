@@ -159,14 +159,16 @@ export default function App() {
 
     dataChannel.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       if (data.type === 'nickname') {
         peerNickname.current = data.name;
-        setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.` }]);
+        setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.`, timestamp }]);
       } else if (data.type === 'chat') {
         playNotificationSound();
         setPeerIsTyping(false); 
         clearTimeout(typingTimeout.current);
-        setMessages((prev) => [...prev, { type: 'peer', content: data.message }]);
+        setMessages((prev) => [...prev, { type: 'peer', content: data.message, timestamp }]);
       } else if (data.type === 'typing') {
         setPeerIsTyping(true);
         clearTimeout(typingTimeout.current);
@@ -186,7 +188,8 @@ export default function App() {
     if (dataChannel.current && dataChannel.current.readyState === 'open') {
         const data = { type: 'chat', message: message };
         dataChannel.current.send(JSON.stringify(data));
-        setMessages((prev) => [...prev, { type: 'self', content: message }]);
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setMessages((prev) => [...prev, { type: 'self', content: message, timestamp }]);
         setNewMessage('');
     }
   };
@@ -266,7 +269,7 @@ export default function App() {
                     <div className="mt-4">
                       <label className="block text-sm font-medium text-slate-700">Share this ID with your peer:</label>
                       <input type="text" value={chatId} readOnly className="w-full mt-1 p-2 bg-white border border-slate-300 rounded-md shadow-sm" />
-                      <button onClick={handleCopyId} className="w-full mt-2 bg-slate-200 text-slate-700 py-1 px-3 rounded-md hover:bg-slate-300 text-sm">
+                      <button onClick={handleCopyId} className="w-full mt-2 bg-slate-200 text-slate-700 py-1 px-3 rounded-md hover:bg-slate-300 text-sm transition-colors">
                         {copyButtonText}
                       </button>
                     </div>
@@ -284,14 +287,19 @@ export default function App() {
           ) : (
             // --- Chat View ---
             <div className="flex-grow flex flex-col overflow-hidden">
-              <div className="flex-grow bg-slate-100 rounded-lg p-4 mb-4 overflow-y-auto">
+              <div className="flex-grow bg-slate-100 rounded-lg p-4 mb-4 overflow-y-auto space-y-4">
                 {messages.map((msg, index) => (
                   <div key={index}>
                     {msg.type === 'system' && <p className="text-center text-sm text-slate-400 my-2">{msg.content}</p>}
                     {msg.type !== 'system' && (
-                      <div className={`flex flex-col mb-4 ${msg.type === 'self' ? 'items-end' : 'items-start'}`}>
-                        <div className="text-xs text-slate-500 mb-1">{msg.type === 'self' ? nickname : peerNickname.current}</div>
-                        <div className={`px-4 py-2 rounded-2xl shadow max-w-xs md:max-w-md ${msg.type === 'self' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-slate-200 text-slate-800 rounded-bl-none'}`}>{msg.content}</div>
+                      <div className={`flex items-end gap-2 ${msg.type === 'self' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex flex-col space-y-1 text-sm max-w-xs mx-2 ${msg.type === 'self' ? 'order-1 items-end' : 'order-2 items-start'}`}>
+                          <div className={`px-4 py-2 rounded-2xl inline-block ${msg.type === 'self' ? 'bg-indigo-500 text-white rounded-br-none' : 'bg-slate-200 text-slate-800 rounded-bl-none'}`}>
+                            <span className="block font-semibold mb-1">{msg.type === 'self' ? nickname : peerNickname.current}</span>
+                            {msg.content}
+                            <span className="block text-xs mt-1 opacity-75">{msg.timestamp}</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>

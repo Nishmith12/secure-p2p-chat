@@ -6,16 +6,23 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
   const [status, setStatus] = useState('Waiting');
   const [copyButtonText, setCopyButtonText] = useState('Copy ID');
 
-  const setupDataChannel = (channel) => {
-    channel.onopen = () => {
-      console.log("Data channel is open!");
-      setPage('chat');
+  const setupConnectionListener = () => {
+    pc.current.onconnectionstatechange = () => {
+      console.log(`Connection State: ${pc.current.connectionState}`);
+      if (pc.current.connectionState === 'connected') {
+        setStatus('Connected!');
+        setPage('chat');
+      }
+      if (pc.current.connectionState === 'failed') {
+        setStatus('Connection failed. Please try again.');
+      }
     };
   };
 
   const handleCreateChat = async () => {
     if (!nickname.trim()) return alert("Please enter a nickname!");
     setStatus('Creating chat...');
+    setupConnectionListener(); // Set up the reliable connection listener
 
     const callDoc = doc(collection(db, 'calls'));
     const offerCandidates = collection(callDoc, 'offerCandidates');
@@ -28,7 +35,6 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
     };
 
     dataChannel.current = pc.current.createDataChannel("chat");
-    setupDataChannel(dataChannel.current); // Setup onopen for the creator
     
     const offerDescription = await pc.current.createOffer();
     await pc.current.setLocalDescription(offerDescription);
@@ -59,6 +65,7 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
     if (!nickname.trim()) return alert("Please enter a nickname!");
     if (!joinId.trim()) return alert("Please enter a chat ID!");
     setStatus('Joining chat...');
+    setupConnectionListener(); // Set up the reliable connection listener
 
     const callDoc = doc(db, 'calls', joinId);
     const answerCandidates = collection(callDoc, 'answerCandidates');
@@ -70,7 +77,6 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
 
     pc.current.ondatachannel = (event) => {
       dataChannel.current = event.channel;
-      setupDataChannel(dataChannel.current); // Setup onopen for the joiner
     };
 
     const callData = (await getDoc(callDoc)).data();

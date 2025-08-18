@@ -24,37 +24,49 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
   }, [messages]);
 
   useEffect(() => {
-    // Send nickname as soon as the component mounts, as the channel is already open
-    dataChannel.current.send(JSON.stringify({ type: 'nickname', name: nickname }));
+    if (dataChannel.current) {
+      // This is the main fix: The ChatRoom component is now responsible
+      // for setting up its own event listeners, which is more reliable.
+      
+      // 1. Define what happens when the connection opens
+      dataChannel.current.onopen = () => {
+        console.log("Data channel is open!");
+        // Send nickname only after the connection is confirmed to be open
+        dataChannel.current.send(JSON.stringify({ type: 'nickname', name: nickname }));
+      };
 
-    dataChannel.current.onclose = () => {
-      console.log("Data channel is closed!");
-      alert("Peer has disconnected.");
-      onDisconnect();
-    };
+      // 2. Define what happens when the connection closes
+      dataChannel.current.onclose = () => {
+        console.log("Data channel is closed!");
+        alert("Peer has disconnected.");
+        onDisconnect();
+      };
 
-    dataChannel.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // 3. Define what happens when a message is received
+      dataChannel.current.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      if (data.type === 'nickname') {
-        peerNickname.current = data.name;
-        setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.`, timestamp }]);
-      } else if (data.type === 'chat') {
-        playNotificationSound();
-        setPeerIsTyping(false);
-        clearTimeout(typingTimeout.current);
-        setMessages((prev) => [...prev, { type: 'peer', content: data.message, timestamp }]);
-      } else if (data.type === 'typing') {
-        setPeerIsTyping(true);
-        clearTimeout(typingTimeout.current);
-        typingTimeout.current = setTimeout(() => setPeerIsTyping(false), 2000);
-      }
-    };
+        if (data.type === 'nickname') {
+          peerNickname.current = data.name;
+          setMessages((prev) => [...prev, { type: 'system', content: `${data.name} has joined.`, timestamp }]);
+        } else if (data.type === 'chat') {
+          playNotificationSound();
+          setPeerIsTyping(false);
+          clearTimeout(typingTimeout.current);
+          setMessages((prev) => [...prev, { type: 'peer', content: data.message, timestamp }]);
+        } else if (data.type === 'typing') {
+          setPeerIsTyping(true);
+          clearTimeout(typingTimeout.current);
+          typingTimeout.current = setTimeout(() => setPeerIsTyping(false), 2000);
+        }
+      };
+    }
     
-    // Cleanup function to remove listeners when component unmounts
+    // Cleanup function to remove listeners when the component unmounts
     return () => {
         if (dataChannel.current) {
+            dataChannel.current.onopen = null;
             dataChannel.current.onmessage = null;
             dataChannel.current.onclose = null;
         }

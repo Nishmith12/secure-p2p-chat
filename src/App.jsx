@@ -4,9 +4,19 @@ import { doc, deleteDoc } from "firebase/firestore";
 import Setup from './components/Setup';
 import ChatRoom from './components/ChatRoom';
 
+// Updated server configuration with a TURN server for better reliability
 const servers = {
   iceServers: [
     { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+    {
+      urls: [
+        'stun:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
   ],
   iceCandidatePoolSize: 10,
 };

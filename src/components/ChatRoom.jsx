@@ -26,7 +26,6 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
   useEffect(() => {
     if (!dataChannel.current) return;
 
-    // Send nickname immediately upon component mount
     dataChannel.current.send(JSON.stringify({ type: 'nickname', name: nickname }));
 
     dataChannel.current.onclose = () => {
@@ -87,17 +86,17 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
 
   return (
     <div className="flex-grow flex flex-col overflow-hidden">
-      <div className="flex-grow bg-gray-900 rounded-lg p-4 mb-4 overflow-y-auto space-y-4">
+      <div className="flex-grow bg-transparent rounded-lg p-4 mb-4 overflow-y-auto space-y-4 custom-scrollbar">
         {messages.map((msg, index) => (
           <div key={index}>
-            {msg.type === 'system' && <p className="text-center text-sm text-gray-500 my-2">{msg.content}</p>}
+            {msg.type === 'system' && <p className="text-center text-sm text-slate-500 my-2">{msg.content}</p>}
             {msg.type !== 'system' && (
               <div className={`flex items-end gap-2 ${msg.type === 'self' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`flex flex-col space-y-1 text-sm max-w-xs mx-2 ${msg.type === 'self' ? 'order-1 items-end' : 'order-2 items-start'}`}>
-                  <div className={`px-4 py-3 rounded-2xl inline-block ${msg.type === 'self' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-gray-600 text-white rounded-bl-none'}`}>
-                    <span className="block font-semibold mb-1 text-xs text-gray-300">{msg.type === 'self' ? nickname : peerNickname.current}</span>
+                  <div className={`px-4 py-3 rounded-2xl inline-block shadow-md ${msg.type === 'self' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-slate-600 text-white rounded-bl-none'}`}>
+                    <span className="block font-semibold mb-1 text-xs text-slate-300">{msg.type === 'self' ? nickname : peerNickname.current}</span>
                     <p className="text-base">{msg.content}</p>
-                    <span className="block text-xs mt-2 text-gray-400 text-right">{msg.timestamp}</span>
+                    <span className="block text-xs mt-2 text-slate-400 text-right">{msg.timestamp}</span>
                   </div>
                 </div>
               </div>
@@ -107,10 +106,10 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
         <div ref={messagesEndRef} />
       </div>
       <div className="h-6 px-4 pb-2">
-        {peerIsTyping && <p className="text-sm text-gray-400 italic">{`${peerNickname.current} is typing...`}</p>}
+        {peerIsTyping && <p className="text-sm text-slate-400 italic">{`${peerNickname.current} is typing...`}</p>}
       </div>
       <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-        <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" />
+        <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" />
         <button type="submit" className="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>

@@ -20,9 +20,7 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
       event.candidate && addDoc(offerCandidates, event.candidate.toJSON());
     };
 
-    // Creator makes the data channel
     dataChannel.current = pc.current.createDataChannel("chat");
-    // Creator waits for their own channel to open
     dataChannel.current.onopen = () => {
       console.log("Creator's data channel is open!");
       setPage('chat');
@@ -66,7 +64,6 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
       event.candidate && addDoc(answerCandidates, event.candidate.toJSON());
     };
 
-    // Joiner waits for the remote data channel to arrive
     pc.current.ondatachannel = (event) => {
       dataChannel.current = event.channel;
       dataChannel.current.onopen = () => {
@@ -103,31 +100,31 @@ export default function Setup({ nickname, setNickname, chatId, setChatId, joinId
     <div>
       <h2 className="text-2xl font-bold text-center mb-6 text-white">Start a Secure Chat</h2>
       <div className="mb-6">
-        <label htmlFor="nickname-input" className="block text-sm font-medium text-gray-300 mb-1">Your Nickname</label>
-        <input type="text" id="nickname-input" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Enter your name..." className="w-full mt-1 p-3 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" />
+        <label htmlFor="nickname-input" className="block text-sm font-medium text-slate-300 mb-1">Your Nickname</label>
+        <input type="text" id="nickname-input" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Enter your name..." className="w-full mt-1 p-3 bg-slate-700/50 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-700/50 p-6 rounded-lg border border-gray-600 flex flex-col">
+        <div className="bg-slate-700/30 p-6 rounded-lg border border-slate-600 flex flex-col">
           <h3 className="font-semibold mb-3 text-lg text-white">Create a New Chat</h3>
-          <button onClick={handleCreateChat} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition shadow-lg">Create Chat</button>
+          <button onClick={handleCreateChat} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition shadow-lg transform hover:scale-105">Create Chat</button>
           {chatId && (
             <div className="mt-4 flex-grow flex flex-col">
-              <label className="block text-sm font-medium text-gray-300">Share this ID with your peer:</label>
-              <input type="text" value={chatId} readOnly className="w-full mt-2 p-2 bg-gray-800 border border-gray-600 rounded-md shadow-sm font-mono text-center" />
-              <button onClick={handleCopyId} className="w-full mt-2 bg-gray-600 text-gray-200 py-2 px-3 rounded-md hover:bg-gray-500 text-sm transition-colors">
+              <label className="block text-sm font-medium text-slate-300">Share this ID with your peer:</label>
+              <input type="text" value={chatId} readOnly className="w-full mt-2 p-2 bg-slate-900/50 border border-slate-700 rounded-md shadow-sm font-mono text-center" />
+              <button onClick={handleCopyId} className="w-full mt-2 bg-slate-600 text-slate-200 py-2 px-3 rounded-md hover:bg-slate-500 text-sm transition-colors">
                 {copyButtonText}
               </button>
             </div>
           )}
         </div>
-        <div className="bg-gray-700/50 p-6 rounded-lg border border-gray-600">
+        <div className="bg-slate-700/30 p-6 rounded-lg border border-slate-600">
           <h3 className="font-semibold mb-3 text-lg text-white">Join an Existing Chat</h3>
-          <label htmlFor="join-id-input" className="block text-sm font-medium text-gray-300">Enter Peer's Chat ID:</label>
-          <input type="text" id="join-id-input" value={joinId} onChange={(e) => setJoinId(e.target.value)} className="w-full mt-2 p-3 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-white" />
-          <button onClick={handleJoinChat} className="w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition shadow-lg">Join Chat</button>
+          <label htmlFor="join-id-input" className="block text-sm font-medium text-slate-300">Enter Peer's Chat ID:</label>
+          <input type="text" id="join-id-input" value={joinId} onChange={(e) => setJoinId(e.target.value)} className="w-full mt-2 p-3 bg-slate-700/50 border border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-white" />
+          <button onClick={handleJoinChat} className="w-full mt-4 bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 transition shadow-lg transform hover:scale-105">Join Chat</button>
         </div>
       </div>
-      <div className="text-center mt-6 text-gray-400">{status}</div>
+      <div className="text-center mt-6 text-slate-400">{status}</div>
     </div>
   );
 }

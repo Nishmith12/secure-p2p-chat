@@ -32,10 +32,11 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
 
     dataChannel.current.onclose = () => {
       console.log("Data channel is closed!");
+      // Replace the alert with a graceful system message
       setMessages((prev) => [...prev, { type: 'system', content: `${peerNickname.current} has disconnected.` }]);
       setTimeout(() => {
         onDisconnect();
-      }, 3000);
+      }, 3000); // Wait 3 seconds before resetting the UI
     };
 
     dataChannel.current.onmessage = (event) => {
@@ -126,7 +127,7 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
         <div className="relative flex-grow">
           <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12" />
           <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
           </button>
         </div>
         <button type="submit" className="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform active:scale-95">

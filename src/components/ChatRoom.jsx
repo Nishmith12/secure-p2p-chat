@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import EmojiPicker from 'emoji-picker-react';
 
 const playNotificationSound = () => {
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -14,6 +15,7 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [peerIsTyping, setPeerIsTyping] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   
   const peerNickname = useRef('Peer');
   const typingTimeout = useRef(null);
@@ -74,6 +76,7 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       setMessages((prev) => [...prev, { type: 'self', content: message, timestamp }]);
       setNewMessage('');
+      setShowEmojiPicker(false);
     }
   };
 
@@ -84,8 +87,12 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
     }
   };
 
+  const onEmojiClick = (emojiObject) => {
+    setNewMessage(prevInput => prevInput + emojiObject.emoji);
+  };
+
   return (
-    <div className="flex-grow flex flex-col overflow-hidden">
+    <div className="flex-grow flex flex-col overflow-hidden relative">
       <div className="flex-grow bg-transparent rounded-lg p-4 mb-4 overflow-y-auto space-y-4 custom-scrollbar">
         {messages.map((msg, index) => (
           <div key={index}>
@@ -95,7 +102,7 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
                 <div className={`flex flex-col space-y-1 text-sm max-w-xs mx-2 ${msg.type === 'self' ? 'order-1 items-end' : 'order-2 items-start'}`}>
                   <div className={`px-4 py-3 rounded-2xl inline-block shadow-md ${msg.type === 'self' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-slate-600 text-white rounded-bl-none'}`}>
                     <span className="block font-semibold mb-1 text-xs text-slate-300">{msg.type === 'self' ? nickname : peerNickname.current}</span>
-                    <p className="text-base">{msg.content}</p>
+                    <p className="text-base break-words">{msg.content}</p>
                     <span className="block text-xs mt-2 text-slate-400 text-right">{msg.timestamp}</span>
                   </div>
                 </div>
@@ -108,8 +115,20 @@ export default function ChatRoom({ nickname, dataChannel, onDisconnect }) {
       <div className="h-6 px-4 pb-2">
         {peerIsTyping && <p className="text-sm text-slate-400 italic">{`${peerNickname.current} is typing...`}</p>}
       </div>
+      
+      {showEmojiPicker && (
+        <div className="absolute bottom-20 right-0 z-10">
+          <EmojiPicker onEmojiClick={onEmojiClick} theme="dark" />
+        </div>
+      )}
+
       <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-        <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" />
+        <div className="relative flex-grow">
+          <input type="text" value={newMessage} onChange={handleTyping} placeholder="Type your message..." className="flex-grow w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-white pr-12" />
+          <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+          </button>
+        </div>
         <button type="submit" className="bg-blue-600 text-white rounded-full p-3 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform active:scale-95">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
         </button>
